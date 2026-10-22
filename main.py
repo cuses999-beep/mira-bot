@@ -1,4 +1,3 @@
-
 import os
 import logging
 import threading
@@ -20,9 +19,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Retrieve API keys from environment
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Retrieve API keys from environment or fallback
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8847302125:AAFwAOMjGXiqx7eSVAi6Dm6HF1oAmQYDchw")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6JUqAkLDQvcdbzKF5zBEHwCJYstZoGUjXyqJQSsJioZzA")
 
 # Default System Persona for Mira
 DEFAULT_PERSONA = (
@@ -30,11 +29,9 @@ DEFAULT_PERSONA = (
     "You communicate in a warm, concise, and helpful manner on Telegram."
 )
 
-# User session history
 user_sessions = {}
 
 def get_user_session(user_id: int):
-    """Retrieves or initializes a user's session data."""
     if user_id not in user_sessions:
         user_sessions[user_id] = {
             "persona": DEFAULT_PERSONA,
@@ -43,7 +40,6 @@ def get_user_session(user_id: int):
     return user_sessions[user_id]
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handler for /start command."""
     user = update.effective_user
     user_id = user.id
     get_user_session(user_id)
@@ -59,15 +55,12 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
 async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handler to reset conversation history."""
     user_id = update.effective_user.id
     session = get_user_session(user_id)
     session["history"] = []
-    
     await update.message.reply_text("✨ Conversation history cleared! We have a fresh start.")
 
 async def persona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handler to set custom system persona for the bot."""
     user_id = update.effective_user.id
     session = get_user_session(user_id)
 
@@ -90,7 +83,6 @@ async def persona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Processes user text messages and generates AI response via Gemini."""
     user_id = update.effective_user.id
     user_text = update.message.text
 
@@ -130,7 +122,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ Sorry, I encountered an error connecting to the AI model. Please try again in a moment."
         )
 
-# --- Web Server to Keep Render Alive ---
+# Web Server to satisfy Render Web Service health checks
 app = Flask(__name__)
 
 @app.route('/')
@@ -138,15 +130,11 @@ def home():
     return "Mira Bot is running!"
 
 def run_web_server():
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
 def main():
-    if not TELEGRAM_BOT_TOKEN:
-        print("ERROR: TELEGRAM_BOT_TOKEN environment variable is missing.")
-        return
-
-    # Start dummy web server in background thread for Render health check
+    # Start web server thread
     threading.Thread(target=run_web_server, daemon=True).start()
 
     # Build python-telegram-bot application
