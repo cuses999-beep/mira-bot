@@ -122,7 +122,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ Sorry, I encountered an error connecting to the AI model. Please try again in a moment."
         )
 
-# Dummy Web Server to fulfill Render Web Service health checks
+# Web Server to satisfy Render Web Service port check
 app = Flask(__name__)
 
 @app.route('/')
@@ -134,10 +134,10 @@ def run_web_server():
     app.run(host='0.0.0.0', port=port)
 
 def main():
-    # Start web server thread for Render HTTP binding
+    # Start web server thread for Render
     threading.Thread(target=run_web_server, daemon=True).start()
 
-    # Launch Telegram Bot Polling
+    # Launch Telegram Bot
     bot_app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
     bot_app.add_handler(CommandHandler("start", start_command))
