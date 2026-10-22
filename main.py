@@ -19,11 +19,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Retrieve API keys from environment or fallback
+# Retrieve API keys from environment variables or use fallback defaults
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8847302125:AAFwAOMjGXiqx7eSVAi6Dm6HF1oAmQYDchw")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6JUqAkLDQvcdbzKF5zBEHwCJYstZoGUjXyqJQSsJioZzA")
 
-# Default System Persona for Mira
+# Default System Persona
 DEFAULT_PERSONA = (
     "You are Mira, a friendly, intelligent, and cheerful AI assistant. "
     "You communicate in a warm, concise, and helpful manner on Telegram."
@@ -122,22 +122,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ Sorry, I encountered an error connecting to the AI model. Please try again in a moment."
         )
 
-# Web Server to satisfy Render Web Service health checks
+# Dummy Web Server to fulfill Render Web Service health checks
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Mira Bot is running!"
+    return "Mira Bot status: Active and Running!"
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
 def main():
-    # Start web server thread
+    # Start web server thread for Render HTTP binding
     threading.Thread(target=run_web_server, daemon=True).start()
 
-    # Build python-telegram-bot application
+    # Launch Telegram Bot Polling
     bot_app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
     bot_app.add_handler(CommandHandler("start", start_command))
@@ -145,9 +145,8 @@ def main():
     bot_app.add_handler(CommandHandler("persona", persona_command))
     bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    print("🤖 Mira Telegram Bot is running on Render...")
+    logger.info("Mira Telegram Bot is active!")
     bot_app.run_polling()
 
 if __name__ == "__main__":
     main()
-```
