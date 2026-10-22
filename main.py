@@ -122,12 +122,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ Sorry, I encountered an error connecting to the AI model. Please try again in a moment."
         )
 
-# Web Server to satisfy Render Web Service port check
+# Web Server to satisfy Render Web Service port check & UptimeRobot pings
 app = Flask(__name__)
 
-@app.route('/')
+# Accept both GET and HEAD methods for UptimeRobot free tier compatibility
+@app.route('/', methods=['GET', 'HEAD'])
 def home():
-    return "Mira Bot status: Active and Running!"
+    return "Mira Bot status: Active and Running!", 200
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
