@@ -19,9 +19,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Environment variables & direct key integration
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8847302125:AAFwAOMjGXiqx7eSVAi6Dm6HF1oAmQYDchw")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6KmfoMXWYyT7QgePHWXHyYcLHuX34KJsrXCi-YtVpO75g")
+# Fetch API Keys safely from Render Environment Variables
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 DEFAULT_PERSONA = (
     "You are Ani x, a friendly, intelligent, and cheerful AI assistant. "
