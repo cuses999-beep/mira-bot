@@ -2,7 +2,7 @@ import os
 import logging
 import threading
 from flask import Flask
-from google import genai
+from groq import Groq
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # Fetch API Keys safely from Render Environment Variables
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GROQ_API_KEY = os.getenv("GEMINI_API_KEY")  # Using same environment variable slot for convenience
 
 DEFAULT_PERSONA = (
     "You are Ani x, a friendly, intelligent, and cheerful AI assistant. "
@@ -43,10 +43,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = get_user_session(user.id)
 
     welcome_message = (
-        f"Hi {user.first_name}! 👋 I am **Ani x**, your AI companion.\n\n"
+        f"Hi {user.first_name}! 👋 I am **Ani x**, powered by Groq.\n\n"
         "• Send me a message to chat!\n"
-        "• `/clear` - Reset history.\n"
-        "• `/persona <instructions>` - Custom personality."
+        "• `/clear` - Reset history."
     )
     await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
@@ -54,18 +53,6 @@ async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = get_user_session(update.effective_user.id)
     session["history"] = []
     await update.message.reply_text("✨ Conversation history cleared!")
-
-async def persona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    session = get_user_session(update.effective_user.id)
-
-    if not context.args:
-        await update.message.reply_text(f"Current persona:\n\n_{session['persona']}_", parse_mode="Markdown")
-        return
-
-    new_persona = " ".join(context.args)
-    session["persona"] = new_persona
-    session["history"] = []
-    await update.message.reply_text(f"✅ Persona updated to:\n_{new_persona}_", parse_mode="Markdown")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -79,33 +66,33 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = get_user_session(user_id)
     session_history = session["history"]
 
-    session_history.append({"role": "user", "parts": [{"text": user_text}]})
+    # Build messages for Groq API
+    messages = [{"role": "system", "content": session["persona"]}]
+    for h in session_history:
+        role = "user" if h["role"] == "user" else "assistant"
+        messages.append({"role": role, "content": h["parts"][0]["text"]})
+    messages.append({"role": "user", "content": user_text})
 
     try:
-        api_key = os.getenv("GEMINI_API_KEY")
-        client = genai.Client(api_key=api_key)
-
-        # Using gemini-2.0-flash for high stability
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=session_history,
-            config={
-                "system_instruction": session["persona"]
-            }
+        client = Groq(api_key=GROQ_API_KEY)
+        
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            temperature=0.7,
         )
 
-        bot_reply = response.text if response.text else "Sorry, I couldn't process that request."
-        session_history.append({"role": "model", "parts": [{"text": bot_reply}]})
+        bot_reply = response.choices[0].message.content if response.choices else "Sorry, I couldn't process that."
+        
+        session_history.append({"role": "user", "parts": [{"text": user_text}]})
+        session_history.append({"role": "assistant", "parts": [{"text": bot_reply}]})
 
         await update.message.reply_text(bot_reply)
 
     except Exception as e:
-        logger.error(f"Error calling Gemini API: {e}")
-        if session_history and session_history[-1]["role"] == "user":
-            session_history.pop()
-
+        logger.error(f"Error calling Groq API: {e}")
         await update.message.reply_text(
-            f"⚠️ AI Error: {e}"
+            f"⚠️ Groq API Error: {e}"
         )
 
 # Web server for keeping service alive on Render
@@ -113,7 +100,7 @@ app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'HEAD'])
 def home():
-    return "Ani x Bot Status: Active", 200
+    return "Ani x Bot Status: Active (Groq)", 200
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -127,12 +114,10 @@ def main():
 
     bot_app.add_handler(CommandHandler("start", start_command))
     bot_app.add_handler(CommandHandler("clear", clear_command))
-    bot_app.add_handler(CommandHandler("persona", persona_command))
     bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    logger.info("Bot is running...")
+    logger.info("Bot is running with Groq...")
     bot_app.run_polling()
 
 if __name__ == "__main__":
     main()
-    
