@@ -82,54 +82,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session_history.append({"role": "user", "parts": [{"text": user_text}]})
 
     try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
+        api_key = os.getenv("GEMINI_API_KEY")
+        client = genai.Client(api_key=api_key)
 
-        # Standard Flash Model
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=session_history,
-            config={
-                "system_instruction": session["persona"]
-            }
-        )
-
-        bot_reply = response.text if response.text else "Sorry, I couldn't process that request."
-        session_history.append({"role": "model", "parts": [{"text": bot_reply}]})
-
-        await update.message.reply_text(bot_reply)
-
-    except Exception as e:
-        logger.error(f"Error calling Gemini API: {e}")
-        if session_history and session_history[-1]["role"] == "user":
-            session_history.pop()
-
-        await update.message.reply_text(
-            "⚠️ Error connecting to AI. Please check your Gemini API key in Environment Variables."
-        )
-
-# Web server for keeping service alive on Render
-app = Flask(__name__)
-
-@app.route('/', methods=['GET', 'HEAD'])
-def home():
-    return "Ani x Bot Status: Active", 200
-
-def run_web_server():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
-
-def main():
-    threading.Thread(target=run_web_server, daemon=True).start()
-
-    bot_app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-
-    bot_app.add_handler(CommandHandler("start", start_command))
-    bot_app.add_handler(CommandHandler("clear", clear_command))
-    bot_app.add_handler(CommandHandler("persona", persona_command))
-    bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    logger.info("Bot is running...")
-    bot_app.run_polling()
-
-if __name__ == "__main__":
-    main()
+        response = client
