@@ -85,9 +85,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         api_key = os.getenv("GEMINI_API_KEY")
         client = genai.Client(api_key=api_key)
 
-        # Updated to gemini-3.8-flash as requested by API logs
+        # Using gemini-2.0-flash for high stability
         response = client.models.generate_content(
-            model="gemini-3.8-flash",
+            model="gemini-2.0-flash",
             contents=session_history,
             config={
                 "system_instruction": session["persona"]
@@ -135,3 +135,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
